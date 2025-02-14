@@ -1,6 +1,5 @@
 # Imagen base: Python slim para reducir el tamaño de la imagen final
-FROM python:3.11
-ENV PYTHONUNBUFFERED True
+FROM python:3.11-slim-buster
 
 # Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /app
