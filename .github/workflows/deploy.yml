@@ -1,8 +1,8 @@
-name: Deploy FastAPI to Cloud Run on Push to Main
+name: Deploy FastAPI to Cloud Run on Push to Prod
 
 on:
   push:
-    branches: [master-draft] # Cambia a "master" si es tu rama principal
+    branches: [master]
 
 jobs:
   deploy:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11" # Ajusta a tu versión de Python
+          python-version: "3.11"
           cache: "pip"
 
       - name: Install dependencies
@@ -24,12 +24,12 @@ jobs:
 
       - name: Build and tag Docker image
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:latest .
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:latest
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:${GITHUB_SHA} .
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:${GITHUB_SHA}
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v1
         with:
-          service: fastapi-app # Nombre de tu servicio en Cloud Run
-          region: us-central1 # Ajusta a tu región
-          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:latest
+          service: fastapi-app
+          region: us-central1
+          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app:${GITHUB_SHA}
