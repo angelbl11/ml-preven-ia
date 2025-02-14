@@ -54,17 +54,17 @@ features_hipertension = [
 
 # --- Cargar modelos y scalers específicos ---
 try:
-    with open("../models/obesity_model.pkl", "rb") as f:
+    with open("models/obesity_model.pkl", "rb") as f:
         obesity_model = pickle.load(f)
-    with open("../models/scaler_obesity.pkl", "rb") as f:
+    with open("models/scaler_obesity.pkl", "rb") as f:
         scaler_obesity = pickle.load(f)
-    with open("../models/diabetes_model.pkl", "rb") as f:
+    with open("models/diabetes_model.pkl", "rb") as f:
         diabetes_model = pickle.load(f)
-    with open("../models/scaler_diabetes.pkl", "rb") as f:
+    with open("models/scaler_diabetes.pkl", "rb") as f:
         scaler_diabetes = pickle.load(f)
-    with open("../models/hipertension_model.pkl", "rb") as f:
+    with open("models/hipertension_model.pkl", "rb") as f:
         hipertension_model = pickle.load(f)
-    with open("../models/scaler_hipertension.pkl", "rb") as f:
+    with open("models/scaler_hipertension.pkl", "rb") as f:
         scaler_hipertension = pickle.load(f)
     print("Modelos y scalers cargados exitosamente.")
 except Exception as e:
