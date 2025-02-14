@@ -13,8 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del código de la aplicación
 COPY . .
 
-# Exponer el puerto en el que se ejecuta la aplicación (8080 es el puerto estándar para Cloud Run)
-EXPOSE 8080
 
 # Comando para iniciar la aplicación usando Uvicorn (puedes ajustarlo según tu configuración)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
