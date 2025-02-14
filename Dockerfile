@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del código de la aplicación
 COPY . .
 
+
 # Exponer el puerto en el que se ejecuta la aplicación (8080 es el puerto estándar para Cloud Run)
 EXPOSE 8080
 
