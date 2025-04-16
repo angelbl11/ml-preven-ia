@@ -75,6 +75,28 @@ class DiabetesPredictor:
         # Crear DataFrame con una fila
         df = pd.DataFrame([data])
 
+        # Imputar HbA1c si no está disponible usando un modelo simple basado en glucosa y otros factores
+        if 'hba1c' not in data or pd.isna(data['hba1c']):
+            # Modelo de imputación simple basado en glucosa y otros factores
+            glucose = float(data.get('fasting_glucose', 100))
+            bmi = float(data.get('bmi', 25))
+            age = float(data.get('age', 45))
+
+            # Fórmula de estimación basada en correlaciones clínicas
+            # Fórmula básica de glucosa a HbA1c
+            estimated_hba1c = (glucose / 28.7) + 2.15
+            # Ajustes basados en otros factores
+            if bmi > 30:
+                estimated_hba1c += 0.3
+            if age > 45:
+                estimated_hba1c += 0.2
+            if data.get('family_history_diabetes', 0) == 1:
+                estimated_hba1c += 0.2
+
+            # Mantener dentro de rangos razonables
+            data['hba1c'] = max(4.0, min(15.0, estimated_hba1c))
+            print(f"DEBUG - HbA1c imputado: {data['hba1c']}")
+
         # Discretizar variables numéricas de forma segura
         df['hba1c_cat'] = self._safe_transform(
             data['hba1c'], 'hba1c', self.hba1c_bins)
@@ -143,7 +165,7 @@ class DiabetesPredictor:
             - height: float (cm)
             - weight: float (kg)
             - bmi: float
-            - hba1c: float (%)
+            - hba1c: float (%) [opcional]
             - physical_activity: str ('none', 'light', 'moderate', 'frequent')
             - smoker: int (0 o 1)
             - alcohol_consumption: str ('none', 'light', 'moderate', 'heavy')
@@ -171,11 +193,20 @@ class DiabetesPredictor:
             lgb_pred = self.lgb_model.predict_proba(X)[:, 1]
             xgb_pred = self.xgb_model.predict_proba(X)[:, 1]
 
+            # Ajustar pesos si HbA1c fue imputado
+            if 'hba1c' not in data or pd.isna(data.get('hba1c')):
+                # Ajustar pesos para dar más importancia a modelos que dependen menos de HbA1c
+                # RF y LGB tienen más peso
+                adjusted_weights = np.array([0.4, 0.4, 0.2])
+                print("DEBUG - Usando pesos ajustados para predicción sin HbA1c")
+            else:
+                adjusted_weights = self.weights
+
             # Calcular predicción del ensemble
             ensemble_prob = (
-                self.weights[0] * rf_pred +
-                self.weights[1] * lgb_pred +
-                self.weights[2] * xgb_pred
+                adjusted_weights[0] * rf_pred +
+                adjusted_weights[1] * lgb_pred +
+                adjusted_weights[2] * xgb_pred
             )[0]
 
             # Obtener y validar valores clínicos críticos
@@ -239,100 +270,70 @@ class DiabetesPredictor:
                 if float(data['age']) >= 45:
                     risk_score += 0.025
                     risk_factors += 0.5
-                if data['physical_activity'] == 'none':
-                    risk_score += 0.025
-                    risk_factors += 0.5
-                elif data['physical_activity'] == 'light':
-                    risk_score += 0.015
-                    risk_factors += 0.25
-                if float(data['systolic_bp']) >= 140:
-                    risk_score += 0.025
-                    risk_factors += 0.5
 
-                # Ajustar probabilidad para prediabetes
-                ensemble_prob = min(0.4 + risk_score, 0.65)
-
-                # Determinar nivel de riesgo para prediabetes
-                if hba1c >= 6.2 or fasting_glucose >= 120:
-                    risk_level = "Medio-Alto"
-                    recommendations = [
-                        "Consulta médica en las próximas 4 semanas",
-                        "Control de glucemia cada 2-3 meses",
-                        "Plan de alimentación específico",
-                        "Evaluación de factores de riesgo"
-                    ]
+                # Ajustar nivel de riesgo basado en el score
+                if risk_score >= 0.1:
+                    risk_level = "Alto"
+                elif risk_score >= 0.05:
+                    risk_level = "Moderado"
                 else:
-                    risk_level = "Medio"
-                    recommendations = [
-                        "Consulta médica en los próximos 3 meses",
-                        "Control de glucemia cada 3-4 meses",
-                        "Modificación de estilo de vida",
-                        "Plan de alimentación saludable"
-                    ]
+                    risk_level = "Bajo"
 
-            # TERCERO: Si no cumple ningún criterio anterior, es no diabetes
-            else:
-                print("DEBUG - CLASIFICACIÓN: No diabetes por criterios clínicos")
-                prediction = "No Diabetes"
-                risk_level = "Bajo"
-                ensemble_prob = min(ensemble_prob * 0.5, 0.25)
+                # Generar recomendaciones basadas en el nivel de riesgo
                 recommendations = [
-                    "Control médico anual",
-                    "Control de glucemia anual",
-                    "Mantener alimentación saludable",
-                    "Mantener actividad física regular"
+                    "Control de peso",
+                    "Actividad física regular",
+                    "Dieta balanceada"
                 ]
+                if risk_level == "Alto":
+                    recommendations.extend([
+                        "Control de glucemia frecuente",
+                        "Consulta médica en 3 meses"
+                    ])
+                elif risk_level == "Moderado":
+                    recommendations.extend([
+                        "Control de glucemia cada 6 meses",
+                        "Consulta médica en 6 meses"
+                    ])
 
-            # Agregar recomendaciones específicas según factores de riesgo
-            specific_recommendations = []
-            if float(data['bmi']) >= 30:
-                specific_recommendations.append(
-                    "Plan de reducción de peso supervisado médicamente")
-            elif float(data['bmi']) >= 25:
-                specific_recommendations.append(
-                    "Control y reducción gradual del peso")
-            if data['smoker'] == 1:
-                specific_recommendations.append("Cesación del tabaquismo")
-            if float(data['triglycerides']) >= 150:
-                specific_recommendations.append("Control de lípidos")
-            if data['physical_activity'] in ['none', 'light']:
-                specific_recommendations.append(
-                    "Aumentar actividad física gradualmente")
-            if float(data['systolic_bp']) >= 140:
-                specific_recommendations.append("Control de presión arterial")
-
-            # Combinar recomendaciones según el tipo de predicción
-            if specific_recommendations:
-                if prediction == "Diabetes":
-                    # Para diabetes, mantener las 2 primeras recomendaciones críticas
-                    recommendations = recommendations[:2] + \
-                        specific_recommendations[:2]
+            # TERCERO: Usar el modelo de machine learning para casos no concluyentes
+            else:
+                print("DEBUG - CLASIFICACIÓN: Usando modelo de machine learning")
+                if ensemble_prob >= self.threshold:
+                    prediction = "Diabetes"
+                    risk_level = "Alto"
+                    recommendations = [
+                        "Control de peso",
+                        "Actividad física regular",
+                        "Dieta balanceada",
+                        "Control de glucemia frecuente",
+                        "Consulta médica en 3 meses"
+                    ]
                 else:
-                    # Para otros casos, mantener la primera recomendación general
-                    recommendations = [recommendations[0]] + \
-                        specific_recommendations[:3]
+                    prediction = "No Diabetes"
+                    risk_level = "Bajo"
+                    recommendations = [
+                        "Mantener estilo de vida saludable",
+                        "Control de peso",
+                        "Actividad física regular"
+                    ]
 
-            print(f"DEBUG - Clasificación final: {prediction}")
-            print(f"DEBUG - Probabilidad final: {ensemble_prob}")
-            print(f"DEBUG - Nivel de riesgo: {risk_level}")
-
-            result = {
-                'prediction': prediction,
-                'probability': float(ensemble_prob),
-                'risk_level': risk_level,
-                'recommendations': recommendations,
-                'model_probabilities': {
-                    'random_forest': float(rf_pred[0]),
-                    'lightgbm': float(lgb_pred[0]),
-                    'xgboost': float(xgb_pred[0])
+            return {
+                "prediction": prediction,
+                "probability": float(ensemble_prob),
+                "risk_level": risk_level,
+                "recommendations": recommendations,
+                "hba1c_imputed": 'hba1c' not in data or pd.isna(data.get('hba1c')),
+                "model_probabilities": {
+                    "random_forest": float(rf_pred[0]),
+                    "lightgbm": float(lgb_pred[0]),
+                    "xgboost": float(xgb_pred[0])
                 }
             }
 
-            print(f"DEBUG - Resultado final: {result}")
-            return result
         except Exception as e:
             print(f"Error en la predicción: {str(e)}")
-            raise ValueError(f"Error al procesar la predicción: {str(e)}")
+            raise
 
 
 # Ejemplo de uso

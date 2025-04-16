@@ -97,15 +97,21 @@ def plot_roc_curves(y_test, y_probs_dict, ensemble_probs):
         fpr, tpr, _ = roc_curve(y_test, y_prob)
         roc_auc = auc(fpr, tpr)
         p_value = calculate_roc_p_value(y_test, y_prob)
+        # Calcular precisión
+        precision, recall, _ = precision_recall_curve(y_test, y_prob)
+        avg_precision = np.mean(precision)
         plt.plot(fpr, tpr, color=colors[model_name],
-                 label=f'{model_name} (AUC = {roc_auc:.3f}, p = {p_value:.3e})')
+                 label=f'{model_name} (AUC = {roc_auc:.3f}, p = {p_value:.3e}, Precision = {avg_precision:.3f})')
 
     # Graficar ROC del ensemble
     fpr, tpr, _ = roc_curve(y_test, ensemble_probs)
     ensemble_auc = auc(fpr, tpr)
     ensemble_p = calculate_roc_p_value(y_test, ensemble_probs)
+    # Calcular precisión del ensemble
+    precision, recall, _ = precision_recall_curve(y_test, ensemble_probs)
+    ensemble_avg_precision = np.mean(precision)
     plt.plot(fpr, tpr, color=colors['ensemble'],
-             label=f'Ensemble (AUC = {ensemble_auc:.3f}, p = {ensemble_p:.3e})')
+             label=f'Ensemble (AUC = {ensemble_auc:.3f}, p = {ensemble_p:.3e}, Precision = {ensemble_avg_precision:.3f})')
 
     plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
     plt.xlim([0.0, 1.0])

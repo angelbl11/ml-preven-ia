@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, validator
-from typing import Literal
+from typing import Literal, Optional
 from app.services.predict_obesity import ObesityPredictor
 from app.services.predict_diabetes import DiabetesPredictor
 from app.services.predict_hypertension import HypertensionPredictor
@@ -55,8 +55,8 @@ class ObesityPatientData(BasePatientData):
 
 
 class DiabetesPatientData(BasePatientData):
-    hba1c: float = Field(
-        ..., ge=3.0, le=15.0, description="Hemoglobina glucosilada (%)")
+    hba1c: Optional[float] = Field(
+        None, ge=3.0, le=15.0, description="Hemoglobina glucosilada (%)")
     family_history_diabetes: int = Field(
         ..., ge=0, le=1, description="Historia familiar de diabetes (0=No, 1=Sí)")
     triglycerides: float = Field(
@@ -72,8 +72,8 @@ class HypertensionPatientData(BasePatientData):
 
 class CombinedPatientData(BasePatientData):
     # Campos adicionales para diabetes
-    hba1c: float = Field(..., ge=4.0, le=15.0,
-                         description="Hemoglobina glucosilada (%)")
+    hba1c: Optional[float] = Field(None, ge=4.0, le=15.0,
+                                   description="Hemoglobina glucosilada (%)")
     family_history_diabetes: int = Field(..., ge=0, le=1,
                                          description="Historia familiar de diabetes (0=No, 1=Sí)")
     triglycerides: float = Field(..., ge=0, le=1000,
