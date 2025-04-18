@@ -1,6 +1,11 @@
 # Imagen base: Python slim para reducir el tamaño de la imagen final
 FROM python:3.11-slim-buster
 
+# Instalar dependencias del sistema necesarias para LightGBM y otras bibliotecas ML
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
