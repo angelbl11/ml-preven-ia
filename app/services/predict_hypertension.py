@@ -147,7 +147,81 @@ class HypertensionPredictor:
 
         return df[features]
 
-    def predict(self, data):
+    def predict(self, data: dict) -> dict:
+        """
+        Realiza una predicción de hipertensión usando el ensemble de modelos.
+
+        Parameters:
+        -----------
+        data : dict
+            Diccionario con los datos del paciente:
+            - age: int
+                Edad del paciente en años
+            - gender: str
+                Género del paciente ('male' o 'female')
+            - bmi: float
+                Índice de masa corporal
+            - physical_activity: str
+                Nivel de actividad física ('none', 'light', 'moderate', 'frequent')
+            - smoker: int
+                Indica si el paciente fuma (0 o 1)
+            - alcohol_consumption: str
+                Nivel de consumo de alcohol ('none', 'light', 'moderate', 'heavy')
+            - family_history_hypertension: int
+                Indica si hay historia familiar de hipertensión (0 o 1)
+            - fasting_glucose: float
+                Nivel de glucosa en ayunas en mg/dL
+            - systolic_bp: float
+                Presión arterial sistólica en mmHg
+            - diastolic_bp: float
+                Presión arterial diastólica en mmHg
+            - heart_rate: float
+                Frecuencia cardíaca en latidos por minuto
+
+        Returns:
+        --------
+        dict
+            Diccionario con la predicción y probabilidades:
+            - prediction: str
+                Categoría de presión arterial ('Normal', 'Elevada', 'Hipertensión Etapa 1', 'Hipertensión Etapa 2', 'Crisis Hipertensiva')
+            - probability: float
+                Probabilidad de hipertensión (0-1)
+            - risk_level: str
+                Nivel de riesgo ('Muy Alto', 'Alto', 'Moderado', 'Bajo')
+            - recommendations: list[str]
+                Lista de recomendaciones personalizadas
+            - model_probabilities: dict
+                Probabilidades de cada modelo individual:
+                - random_forest: float
+                - lightgbm: float
+                - xgboost: float
+                - blood_pressure_based: float
+                - risk_factors: float
+
+        Example:
+        --------
+        >>> predictor = HypertensionPredictor()
+        >>> sample_data = {
+        ...     'age': 50,
+        ...     'gender': 'female',
+        ...     'bmi': 28.5,
+        ...     'physical_activity': 'moderate',
+        ...     'smoker': 0,
+        ...     'alcohol_consumption': 'light',
+        ...     'family_history_hypertension': 1,
+        ...     'fasting_glucose': 98,
+        ...     'systolic_bp': 135,
+        ...     'diastolic_bp': 85,
+        ...     'heart_rate': 72
+        ... }
+        >>> result = predictor.predict(sample_data)
+        >>> print(result['prediction'])
+        'Hipertensión Etapa 1'
+        >>> print(result['probability'])
+        0.65
+        >>> print(result['risk_level'])
+        'Moderado'
+        """
         try:
             # Preprocesar datos
             X = self._preprocess_input(data)

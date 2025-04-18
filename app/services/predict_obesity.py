@@ -179,7 +179,7 @@ class ObesityPredictor:
         # Normalizar la probabilidad para que no exceda 1
         return min(base_prob, 0.99)
 
-    def predict(self, data):
+    def predict(self, data: dict) -> dict:
         """
         Realiza una predicción de obesidad usando el ensemble de modelos.
 
@@ -188,21 +188,71 @@ class ObesityPredictor:
         data : dict
             Diccionario con los datos del paciente:
             - age: int
-            - gender: str ('male' o 'female')
-            - height: float (cm)
-            - weight: float (kg)
+                Edad del paciente en años
+            - gender: str
+                Género del paciente ('male' o 'female')
+            - height: float
+                Altura del paciente en centímetros
+            - weight: float
+                Peso del paciente en kilogramos
             - bmi: float
-            - physical_activity: str ('none', 'light', 'moderate', 'frequent')
-            - smoker: int (0 o 1)
-            - alcohol_consumption: str ('none', 'light', 'moderate', 'heavy')
-            - family_history_obesity: int (0 o 1)
-            - fasting_glucose: float (mg/dL)
-            - systolic_bp: float (mmHg)
+                Índice de masa corporal
+            - physical_activity: str
+                Nivel de actividad física ('none', 'light', 'moderate', 'frequent')
+            - smoker: int
+                Indica si el paciente fuma (0 o 1)
+            - alcohol_consumption: str
+                Nivel de consumo de alcohol ('none', 'light', 'moderate', 'heavy')
+            - family_history_obesity: int
+                Indica si hay historia familiar de obesidad (0 o 1)
+            - fasting_glucose: float
+                Nivel de glucosa en ayunas en mg/dL
+            - systolic_bp: float
+                Presión arterial sistólica en mmHg
 
         Returns:
         --------
         dict
-            Diccionario con la predicción y probabilidades
+            Diccionario con la predicción y probabilidades:
+            - prediction: str
+                Categoría de IMC ('Bajo peso', 'Peso normal', 'Sobrepeso', 'Obesidad Tipo 1', 'Obesidad Tipo 2', 'Obesidad Tipo 3')
+            - probability: float
+                Probabilidad de obesidad (0-1)
+            - risk_level: str
+                Nivel de riesgo ('Muy Alto', 'Alto', 'Moderado', 'Bajo')
+            - recommendations: list[str]
+                Lista de recomendaciones personalizadas
+            - model_probabilities: dict
+                Probabilidades de cada modelo individual:
+                - random_forest: float
+                - lightgbm: float
+                - xgboost: float
+                - bmi_based: float
+                - risk_factors: float
+
+        Example:
+        --------
+        >>> predictor = ObesityPredictor()
+        >>> sample_data = {
+        ...     'age': 45,
+        ...     'gender': 'male',
+        ...     'height': 175,
+        ...     'weight': 85,
+        ...     'bmi': 27.8,
+        ...     'physical_activity': 'light',
+        ...     'smoker': 1,
+        ...     'alcohol_consumption': 'moderate',
+        ...     'family_history_obesity': 0,
+        ...     'fasting_glucose': 95,
+        ...     'systolic_bp': 130
+        ... }
+        >>> result = predictor.predict(sample_data)
+        >>> print(result['prediction'])
+        'Sobrepeso'
+        >>> print(result['probability'])
+        0.70
+        >>> print(result['risk_level'])
+        'Moderado'
         """
         try:
             # Preprocesar datos

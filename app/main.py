@@ -1,15 +1,73 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, validator
-from typing import Literal, Optional
+from typing import Literal, Optional, List, Dict
 from app.services.predict_obesity import ObesityPredictor
 from app.services.predict_diabetes import DiabetesPredictor
 from app.services.predict_hypertension import HypertensionPredictor
 import uvicorn
+from enum import Enum
 
 app = FastAPI(
     title="PrevenIA Pro API",
-    description="API para predicción de riesgo de obesidad, diabetes e hipertensión usando ensemble de modelos ML",
-    version="1.0.0"
+    description="""
+    API para predicción de riesgo de obesidad, diabetes e hipertensión usando ensemble de modelos ML.
+    
+    ## Características principales
+    
+    - Predicción individual de riesgo de obesidad, diabetes e hipertensión
+    - Predicción combinada de los tres riesgos
+    - Recomendaciones personalizadas basadas en el perfil del paciente
+    - Análisis de probabilidades por modelo individual
+    
+    ## Endpoints disponibles
+    
+    - `/predict/obesity`: Predicción de riesgo de obesidad
+    - `/predict/diabetes`: Predicción de riesgo de diabetes
+    - `/predict/hypertension`: Predicción de riesgo de hipertensión
+    - `/predict/combined`: Predicción combinada de los tres riesgos
+    
+    ## Modelos utilizados
+    
+    - Random Forest
+    - LightGBM
+    - XGBoost
+    - Modelos basados en criterios clínicos
+    
+    ## Ejemplo de uso
+    
+    ```python
+    import requests
+    
+    # Datos del paciente
+    patient_data = {
+        "age": 45,
+        "gender": "male",
+        "height": 175,
+        "weight": 85,
+        "bmi": 27.8,
+        "physical_activity": "moderate",
+        "smoker": 0,
+        "alcohol_consumption": "light",
+        "fasting_glucose": 95,
+        "systolic_bp": 130,
+        "family_history_obesity": 1
+    }
+    
+    # Realizar predicción
+    response = requests.post("http://api.example.com/predict/obesity", json=patient_data)
+    result = response.json()
+    ```
+    """,
+    version="1.0.0",
+    contact={
+        "name": "Equipo PrevenIA",
+        "email": "contacto@prevenia.com",
+        "url": "https://prevenia.com"
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT"
+    }
 )
 
 # Inicializar los predictores (solo una vez)
@@ -90,7 +148,164 @@ class CombinedPatientData(BasePatientData):
         ..., ge=0, le=1, description="Historia familiar de hipertensión (0=No, 1=Sí)")
 
 
-@app.post("/predict/obesity")
+class ObesityPrediction(str, Enum):
+    UNDERWEIGHT = "Bajo peso"
+    NORMAL = "Peso normal"
+    OVERWEIGHT = "Sobrepeso"
+    OBESITY_1 = "Obesidad Tipo 1"
+    OBESITY_2 = "Obesidad Tipo 2"
+    OBESITY_3 = "Obesidad Tipo 3"
+
+
+class DiabetesPrediction(str, Enum):
+    NORMAL = "Normal"
+    PREDIABETES = "Prediabetes"
+    DIABETES = "Diabetes"
+
+
+class HypertensionPrediction(str, Enum):
+    NORMAL = "Normal"
+    ELEVATED = "Elevada"
+    HYPERTENSION_1 = "Hipertensión Etapa 1"
+    HYPERTENSION_2 = "Hipertensión Etapa 2"
+    HYPERTENSIVE_CRISIS = "Crisis Hipertensiva"
+
+
+class RiskLevel(str, Enum):
+    VERY_LOW = "Muy Bajo"
+    LOW = "Bajo"
+    MODERATE = "Moderado"
+    HIGH = "Alto"
+    VERY_HIGH = "Muy Alto"
+
+
+class ModelProbabilities(BaseModel):
+    random_forest: str
+    lightgbm: str
+    xgboost: str
+    bmi_based: str
+    risk_factors: str
+
+
+class ObesityResponse(BaseModel):
+    prediction: ObesityPrediction
+    probability: str
+    risk_level: RiskLevel
+    recommendations: List[str]
+    model_probabilities: ModelProbabilities
+
+
+class DiabetesResponse(BaseModel):
+    prediction: DiabetesPrediction
+    probability: str
+    risk_level: RiskLevel
+    recommendations: List[str]
+    model_probabilities: ModelProbabilities
+
+
+class HypertensionResponse(BaseModel):
+    prediction: HypertensionPrediction
+    probability: str
+    risk_level: RiskLevel
+    recommendations: List[str]
+    model_probabilities: ModelProbabilities
+
+
+class CombinedResponse(BaseModel):
+    obesity: Dict[str, str | List[str] | Dict[str, str]]
+    diabetes: Dict[str, str | List[str] | Dict[str, str]]
+    hypertension: Dict[str, str | List[str] | Dict[str, str]]
+    overall_risk_level: RiskLevel
+    combined_recommendations: List[str]
+
+
+class APIResponse(BaseModel):
+    status: str
+    data: Dict
+
+
+class ObesityAPIResponse(BaseModel):
+    status: str
+    data: ObesityResponse
+
+
+class DiabetesAPIResponse(BaseModel):
+    status: str
+    data: DiabetesResponse
+
+
+class HypertensionAPIResponse(BaseModel):
+    status: str
+    data: HypertensionResponse
+
+
+class CombinedAPIResponse(BaseModel):
+    status: str
+    data: CombinedResponse
+
+
+@app.post("/predict/obesity",
+          response_model=ObesityAPIResponse,
+          responses={
+              200: {
+                  "description": "Predicción exitosa",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "status": "success",
+                              "data": {
+                                  "prediction": "Sobrepeso",
+                                  "probability": "70.00%",
+                                  "risk_level": "Moderado",
+                                  "recommendations": [
+                                      "Consulta con nutricionista",
+                                      "Incrementar actividad física gradualmente",
+                                      "Modificación de hábitos alimenticios",
+                                      "Control regular de peso y medidas",
+                                      "Evaluación trimestral de progreso"
+                                  ],
+                                  "model_probabilities": {
+                                      "random_forest": "65.00%",
+                                      "lightgbm": "72.00%",
+                                      "xgboost": "68.00%",
+                                      "bmi_based": "75.00%",
+                                      "risk_factors": "60.00%"
+                                  }
+                              }
+                          }
+                      }
+                  }
+              },
+              500: {
+                  "description": "Error interno del servidor",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "detail": "Error al procesar la predicción"
+                          }
+                      }
+                  }
+              }
+          },
+          summary="Predicción de riesgo de obesidad",
+          description="""
+    Realiza una predicción del riesgo de obesidad basada en los datos del paciente.
+    
+    ## Parámetros de entrada
+    - Datos demográficos (edad, género)
+    - Medidas antropométricas (altura, peso, IMC)
+    - Factores de estilo de vida (actividad física, tabaquismo, consumo de alcohol)
+    - Factores de riesgo (historia familiar, glucosa, presión arterial)
+    
+    ## Respuesta
+    - Predicción de categoría de IMC (Bajo peso, Peso normal, Sobrepeso, Obesidad Tipo 1, Obesidad Tipo 2, Obesidad Tipo 3)
+    - Probabilidad de riesgo
+    - Nivel de riesgo (Muy Bajo, Bajo, Moderado, Alto, Muy Alto)
+    - Recomendaciones personalizadas
+    - Probabilidades por modelo individual
+    """,
+          tags=["Predicción de Riesgo"]
+          )
 async def predict_obesity(patient: ObesityPatientData):
     try:
         # Convertir el modelo Pydantic a diccionario
@@ -115,7 +330,68 @@ async def predict_obesity(patient: ObesityPatientData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/predict/diabetes")
+@app.post("/predict/diabetes",
+          response_model=DiabetesAPIResponse,
+          responses={
+              200: {
+                  "description": "Predicción exitosa",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "status": "success",
+                              "data": {
+                                  "prediction": "Prediabetes",
+                                  "probability": "45.00%",
+                                  "risk_level": "Moderado",
+                                  "recommendations": [
+                                      "Control de glucosa regular",
+                                      "Modificación de dieta",
+                                      "Ejercicio regular",
+                                      "Control de peso",
+                                      "Evaluación médica periódica"
+                                  ],
+                                  "model_probabilities": {
+                                      "random_forest": "42.00%",
+                                      "lightgbm": "48.00%",
+                                      "xgboost": "45.00%",
+                                      "bmi_based": "50.00%",
+                                      "risk_factors": "40.00%"
+                                  }
+                              }
+                          }
+                      }
+                  }
+              },
+              500: {
+                  "description": "Error interno del servidor",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "detail": "Error al procesar la predicción"
+                          }
+                      }
+                  }
+              }
+          },
+          summary="Predicción de riesgo de diabetes",
+          description="""
+    Realiza una predicción del riesgo de diabetes basada en los datos del paciente.
+    
+    ## Parámetros de entrada
+    - Datos demográficos (edad, género)
+    - Medidas antropométricas (altura, peso, IMC)
+    - Factores de estilo de vida (actividad física, tabaquismo, consumo de alcohol)
+    - Factores de riesgo (historia familiar, HbA1c, glucosa, triglicéridos)
+    
+    ## Respuesta
+    - Predicción de riesgo de diabetes (Normal, Prediabetes, Diabetes)
+    - Probabilidad de riesgo
+    - Nivel de riesgo (Muy Bajo, Bajo, Moderado, Alto, Muy Alto)
+    - Recomendaciones personalizadas
+    - Probabilidades por modelo individual
+    """,
+          tags=["Predicción de Riesgo"]
+          )
 async def predict_diabetes(patient: DiabetesPatientData):
     try:
         # Convertir el modelo Pydantic a diccionario
@@ -140,7 +416,68 @@ async def predict_diabetes(patient: DiabetesPatientData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/predict/hypertension")
+@app.post("/predict/hypertension",
+          response_model=HypertensionAPIResponse,
+          responses={
+              200: {
+                  "description": "Predicción exitosa",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "status": "success",
+                              "data": {
+                                  "prediction": "Hipertensión Etapa 1",
+                                  "probability": "65.00%",
+                                  "risk_level": "Moderado",
+                                  "recommendations": [
+                                      "Control de presión arterial regular",
+                                      "Reducción de sodio en dieta",
+                                      "Ejercicio regular",
+                                      "Control de peso",
+                                      "Evaluación médica periódica"
+                                  ],
+                                  "model_probabilities": {
+                                      "random_forest": "62.00%",
+                                      "lightgbm": "68.00%",
+                                      "xgboost": "65.00%",
+                                      "bmi_based": "70.00%",
+                                      "risk_factors": "60.00%"
+                                  }
+                              }
+                          }
+                      }
+                  }
+              },
+              500: {
+                  "description": "Error interno del servidor",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "detail": "Error al procesar la predicción"
+                          }
+                      }
+                  }
+              }
+          },
+          summary="Predicción de riesgo de hipertensión",
+          description="""
+    Realiza una predicción del riesgo de hipertensión basada en los datos del paciente.
+    
+    ## Parámetros de entrada
+    - Datos demográficos (edad, género)
+    - Medidas antropométricas (altura, peso, IMC)
+    - Factores de estilo de vida (actividad física, tabaquismo, consumo de alcohol)
+    - Factores de riesgo (historia familiar, presión arterial)
+    
+    ## Respuesta
+    - Predicción de categoría de presión arterial (Normal, Elevada, Hipertensión Etapa 1, Hipertensión Etapa 2, Crisis Hipertensiva)
+    - Probabilidad de riesgo
+    - Nivel de riesgo (Muy Bajo, Bajo, Moderado, Alto, Muy Alto)
+    - Recomendaciones personalizadas
+    - Probabilidades por modelo individual
+    """,
+          tags=["Predicción de Riesgo"]
+          )
 async def predict_hypertension(patient: HypertensionPatientData):
     try:
         # Convertir el modelo Pydantic a diccionario
@@ -165,7 +502,97 @@ async def predict_hypertension(patient: HypertensionPatientData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/predict/combined")
+@app.post("/predict/combined",
+          response_model=CombinedAPIResponse,
+          responses={
+              200: {
+                  "description": "Predicción exitosa",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "status": "success",
+                              "data": {
+                                  "obesity": {
+                                      "prediction": "Sobrepeso",
+                                      "probability": "70.00%",
+                                      "risk_level": "Moderado",
+                                      "model_probabilities": {
+                                          "random_forest": "65.00%",
+                                          "lightgbm": "72.00%",
+                                          "xgboost": "68.00%",
+                                          "bmi_based": "75.00%",
+                                          "risk_factors": "60.00%"
+                                      }
+                                  },
+                                  "diabetes": {
+                                      "prediction": "Prediabetes",
+                                      "probability": "45.00%",
+                                      "risk_level": "Moderado",
+                                      "model_probabilities": {
+                                          "random_forest": "42.00%",
+                                          "lightgbm": "48.00%",
+                                          "xgboost": "45.00%",
+                                          "bmi_based": "50.00%",
+                                          "risk_factors": "40.00%"
+                                      }
+                                  },
+                                  "hypertension": {
+                                      "prediction": "Hipertensión Etapa 1",
+                                      "probability": "65.00%",
+                                      "risk_level": "Moderado",
+                                      "model_probabilities": {
+                                          "random_forest": "62.00%",
+                                          "lightgbm": "68.00%",
+                                          "xgboost": "65.00%",
+                                          "bmi_based": "70.00%",
+                                          "risk_factors": "60.00%"
+                                      }
+                                  },
+                                  "overall_risk_level": "Moderado",
+                                  "combined_recommendations": [
+                                      "Control de peso",
+                                      "Ejercicio regular",
+                                      "Dieta balanceada",
+                                      "Control de presión arterial",
+                                      "Control de glucosa",
+                                      "Evaluación médica periódica"
+                                  ]
+                              }
+                          }
+                      }
+                  }
+              },
+              500: {
+                  "description": "Error interno del servidor",
+                  "content": {
+                      "application/json": {
+                          "example": {
+                              "detail": "Error al procesar la predicción"
+                          }
+                      }
+                  }
+              }
+          },
+          summary="Predicción combinada de riesgos",
+          description="""
+    Realiza una predicción combinada de los riesgos de obesidad, diabetes e hipertensión.
+    
+    ## Parámetros de entrada
+    - Datos demográficos (edad, género)
+    - Medidas antropométricas (altura, peso, IMC)
+    - Factores de estilo de vida (actividad física, tabaquismo, consumo de alcohol)
+    - Factores de riesgo (historia familiar, HbA1c, glucosa, triglicéridos, presión arterial)
+    
+    ## Respuesta
+    - Predicciones individuales para cada condición
+    - Probabilidades de riesgo
+    - Niveles de riesgo
+    - Recomendaciones personalizadas combinadas
+    - Probabilidades por modelo individual
+    - Nivel de riesgo general
+    """,
+          tags=["Predicción de Riesgo"]
+          )
 async def predict_combined(patient: CombinedPatientData):
     try:
         # Convertir el modelo Pydantic a diccionario

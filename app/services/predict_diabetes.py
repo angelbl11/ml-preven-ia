@@ -83,15 +83,26 @@ class DiabetesPredictor:
             age = float(data.get('age', 45))
 
             # Fórmula de estimación basada en correlaciones clínicas
-            # Fórmula básica de glucosa a HbA1c
+            # Fórmula mejorada de glucosa a HbA1c
             estimated_hba1c = (glucose / 28.7) + 2.15
+
             # Ajustes basados en otros factores
             if bmi > 30:
                 estimated_hba1c += 0.3
+            elif bmi > 25:
+                estimated_hba1c += 0.15
             if age > 45:
                 estimated_hba1c += 0.2
+            elif age > 30:
+                estimated_hba1c += 0.1
             if data.get('family_history_diabetes', 0) == 1:
                 estimated_hba1c += 0.2
+            if data.get('physical_activity') in ['none', 'light']:
+                estimated_hba1c += 0.1
+            if data.get('smoker', 0) == 1:
+                estimated_hba1c += 0.1
+            if data.get('triglycerides', 0) >= 150:
+                estimated_hba1c += 0.1
 
             # Mantener dentro de rangos razonables
             data['hba1c'] = max(4.0, min(15.0, estimated_hba1c))
@@ -152,7 +163,7 @@ class DiabetesPredictor:
 
         return df[features]
 
-    def predict(self, data):
+    def predict(self, data: dict) -> dict:
         """
         Realiza una predicción de diabetes usando el ensemble de modelos.
 
@@ -161,23 +172,77 @@ class DiabetesPredictor:
         data : dict
             Diccionario con los datos del paciente:
             - age: int
-            - gender: str ('male' o 'female')
-            - height: float (cm)
-            - weight: float (kg)
+                Edad del paciente en años
+            - gender: str
+                Género del paciente ('male' o 'female')
+            - height: float
+                Altura del paciente en centímetros
+            - weight: float
+                Peso del paciente en kilogramos
             - bmi: float
-            - hba1c: float (%) [opcional]
-            - physical_activity: str ('none', 'light', 'moderate', 'frequent')
-            - smoker: int (0 o 1)
-            - alcohol_consumption: str ('none', 'light', 'moderate', 'heavy')
-            - family_history_diabetes: int (0 o 1)
-            - fasting_glucose: float (mg/dL)
-            - systolic_bp: float (mmHg)
-            - triglycerides: float (mg/dL)
+                Índice de masa corporal
+            - hba1c: float, optional
+                Nivel de hemoglobina glicosilada en porcentaje
+            - physical_activity: str
+                Nivel de actividad física ('none', 'light', 'moderate', 'frequent')
+            - smoker: int
+                Indica si el paciente fuma (0 o 1)
+            - alcohol_consumption: str
+                Nivel de consumo de alcohol ('none', 'light', 'moderate', 'heavy')
+            - family_history_diabetes: int
+                Indica si hay historia familiar de diabetes (0 o 1)
+            - fasting_glucose: float
+                Nivel de glucosa en ayunas en mg/dL
+            - systolic_bp: float
+                Presión arterial sistólica en mmHg
+            - triglycerides: float
+                Nivel de triglicéridos en mg/dL
 
         Returns:
         --------
         dict
-            Diccionario con la predicción y probabilidades
+            Diccionario con la predicción y probabilidades:
+            - prediction: str
+                Predicción final ('Diabetes', 'Pre-diabetes', 'No Diabetes')
+            - probability: float
+                Probabilidad de diabetes (0-1)
+            - risk_level: str
+                Nivel de riesgo ('Alto', 'Moderado', 'Bajo')
+            - recommendations: list[str]
+                Lista de recomendaciones personalizadas
+            - hba1c_imputed: bool
+                Indica si el valor de HbA1c fue imputado
+            - model_probabilities: dict
+                Probabilidades de cada modelo individual:
+                - random_forest: float
+                - lightgbm: float
+                - xgboost: float
+
+        Example:
+        --------
+        >>> predictor = DiabetesPredictor()
+        >>> sample_data = {
+        ...     'age': 45,
+        ...     'gender': 'male',
+        ...     'height': 175,
+        ...     'weight': 85,
+        ...     'bmi': 27.8,
+        ...     'hba1c': 6.0,
+        ...     'physical_activity': 'light',
+        ...     'smoker': 1,
+        ...     'alcohol_consumption': 'moderate',
+        ...     'family_history_diabetes': 0,
+        ...     'fasting_glucose': 110,
+        ...     'systolic_bp': 130,
+        ...     'triglycerides': 160
+        ... }
+        >>> result = predictor.predict(sample_data)
+        >>> print(result['prediction'])
+        'Pre-diabetes'
+        >>> print(result['probability'])
+        0.65
+        >>> print(result['risk_level'])
+        'Moderado'
         """
         try:
             # Preprocesar datos
@@ -246,35 +311,41 @@ class DiabetesPredictor:
                 risk_score = 0
                 risk_factors = 0
 
-                # Factores primarios
+                # Factores primarios (peso mayor)
                 if float(data['bmi']) >= 30:
-                    risk_score += 0.05
+                    risk_score += 0.1
                     risk_factors += 1
                 elif float(data['bmi']) >= 25:
-                    risk_score += 0.025
+                    risk_score += 0.05
                     risk_factors += 0.5
                 if data['family_history_diabetes'] == 1:
-                    risk_score += 0.05
+                    risk_score += 0.1
                     risk_factors += 1
 
-                # Factores secundarios
+                # Factores secundarios (peso menor)
                 if data['smoker'] == 1:
-                    risk_score += 0.025
-                    risk_factors += 0.5
+                    risk_score += 0.03
+                    risk_factors += 0.3
                 if float(data['triglycerides']) >= 200:
-                    risk_score += 0.025
+                    risk_score += 0.05
                     risk_factors += 0.5
                 elif float(data['triglycerides']) >= 150:
-                    risk_score += 0.015
-                    risk_factors += 0.25
+                    risk_score += 0.03
+                    risk_factors += 0.3
                 if float(data['age']) >= 45:
-                    risk_score += 0.025
+                    risk_score += 0.05
                     risk_factors += 0.5
+                if data.get('physical_activity') in ['none', 'light']:
+                    risk_score += 0.03
+                    risk_factors += 0.3
+                if data.get('alcohol_consumption') in ['moderate', 'heavy']:
+                    risk_score += 0.03
+                    risk_factors += 0.3
 
                 # Ajustar nivel de riesgo basado en el score
-                if risk_score >= 0.1:
+                if risk_score >= 0.15:
                     risk_level = "Alto"
-                elif risk_score >= 0.05:
+                elif risk_score >= 0.08:
                     risk_level = "Moderado"
                 else:
                     risk_level = "Bajo"
