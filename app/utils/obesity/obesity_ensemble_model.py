@@ -20,6 +20,9 @@ def prepare_data(df):
     Prepara los datos para el modelo usando discretización y encoding
     Implementa una versión más conservadora para evitar sobreajuste
     """
+    # Filtrar pacientes entre 18 y 65 años
+    df = df[(df['age'] >= 18) & (df['age'] <= 65)].copy()
+
     # Crear solo variables objetivo (sin features derivadas para evitar data leakage)
     df = create_target_variables(df)
 
@@ -314,10 +317,84 @@ def train_ensemble(X_train, X_test, y_train, y_test, feature_names):
     }
 
 
+def generate_diagnostic_table(X_test, y_test, model, original_df):
+    """
+    Genera una tabla de diagnóstico para los primeros 30 casos de prueba.
+
+    Parameters:
+    -----------
+    X_test : pd.DataFrame
+        Features de prueba
+    y_test : pd.Series
+        Etiquetas reales de prueba
+    model : dict
+        Diccionario con los modelos entrenados y pesos
+    original_df : pd.DataFrame
+        DataFrame original con los valores sin normalizar
+
+    Returns:
+    --------
+    pd.DataFrame
+        Tabla con los diagnósticos
+    """
+    # Obtener predicciones de cada modelo
+    rf_pred = model['rf_model'].predict_proba(X_test)[:, 1]
+    lgb_pred = model['lgb_model'].predict_proba(X_test)[:, 1]
+    xgb_pred = model['xgb_model'].predict_proba(X_test)[:, 1]
+
+    # Calcular predicción del ensemble
+    ensemble_pred = (
+        model['weights'][0] * rf_pred +
+        model['weights'][1] * lgb_pred +
+        model['weights'][2] * xgb_pred
+    )
+
+    # Crear DataFrame con los primeros 30 casos
+    df_diagnostic = pd.DataFrame()
+
+    # Obtener índices de los primeros 30 casos
+    test_indices = X_test.index[:30]
+
+    # Agregar características relevantes con valores originales
+    df_diagnostic['IMC'] = original_df.loc[test_indices, 'bmi'].round(1)
+    df_diagnostic['Edad'] = original_df.loc[test_indices, 'age'].astype(int)
+    df_diagnostic['Glucosa (mg/dL)'] = original_df.loc[test_indices,
+                                                       'fasting_glucose'].round(1)
+    df_diagnostic['Presión Sistólica (mmHg)'] = original_df.loc[test_indices, 'systolic_bp'].astype(
+        int)
+
+    # Agregar variables de estilo de vida
+    df_diagnostic['Actividad Física'] = original_df.loc[test_indices,
+                                                        'physical_activity']
+    df_diagnostic['Consumo Alcohol'] = original_df.loc[test_indices,
+                                                       'alcohol_consumption']
+    df_diagnostic['Fumador'] = original_df.loc[test_indices, 'smoker'].map({
+                                                                           0: 'No', 1: 'Sí'})
+    df_diagnostic['Historia Familiar'] = original_df.loc[test_indices,
+                                                         'family_history_obesity'].map({0: 'No', 1: 'Sí'})
+
+    # Agregar diagnóstico real
+    df_diagnostic['Diagnóstico Real'] = y_test.iloc[:30].map(
+        {0: 'No Obeso', 1: 'Obeso'})
+
+    # Agregar predicción del modelo
+    df_diagnostic['Predicción Modelo'] = (
+        ensemble_pred[:30] >= model['threshold']).astype(int)
+    df_diagnostic['Predicción Modelo'] = df_diagnostic['Predicción Modelo'].map(
+        {0: 'No Obeso', 1: 'Obeso'})
+
+    # Agregar columna de acierto
+    df_diagnostic['Acierto'] = (
+        df_diagnostic['Diagnóstico Real'] == df_diagnostic['Predicción Modelo'])
+
+    return df_diagnostic
+
+
 def main():
     # Cargar dataset
     print("Cargando dataset...")
     df = pd.read_csv('app/datasets/final_dataset.csv')
+    original_df = df.copy()  # Guardar copia con valores originales
 
     # Preparar datos
     df, features = prepare_data(df)
@@ -334,8 +411,23 @@ def main():
     print("\nEntrenando modelos...")
     model = train_ensemble(X_train, X_test, y_train, y_test, features)
 
-    print("\nModelos guardados en el directorio 'models/'")
-    print("Curva ROC guardada como 'models/roc_curves.png'")
+    # Generar y guardar tabla de diagnóstico
+    print("\nGenerando tabla de diagnóstico...")
+    diagnostic_table = generate_diagnostic_table(
+        X_test, y_test, model, original_df)
+
+    # Crear directorio para resultados si no existe
+    results_dir = os.path.join('app', 'results', 'obesity')
+    os.makedirs(results_dir, exist_ok=True)
+
+    # Guardar tabla en CSV
+    diagnostic_table.to_csv(os.path.join(
+        results_dir, 'diagnostic_table.csv'), index=True)
+    print(
+        f"Tabla de diagnóstico guardada en: {os.path.join(results_dir, 'diagnostic_table.csv')}")
+
+    print("\nModelos guardados en el directorio 'models/obesity/'")
+    print("Curva ROC guardada como 'models/obesity/roc_curves.png'")
 
 
 if __name__ == "__main__":

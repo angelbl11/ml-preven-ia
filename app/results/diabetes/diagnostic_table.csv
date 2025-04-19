@@ -1,0 +1,31 @@
+,HbA1c (%),Glucosa (mg/dL),IMC,Edad,Triglicéridos (mg/dL),Actividad Física,Consumo Alcohol,Fumador,Historia Familiar,Diagnóstico Real,Predicción Modelo,Acierto
+36887,5.8,159.0,22.2,25,1.7,moderate,light,No,No,Diabético,Diabético,True
+97464,5.7,130.0,24.7,19,1.7,frequent,heavy,No,No,Diabético,Diabético,True
+40691,5.8,126.0,26.2,31,1.7,moderate,none,No,No,No Diabético,No Diabético,True
+93322,4.5,145.0,26.6,39,1.7,light,none,No,Sí,Diabético,Diabético,True
+69658,4.0,130.0,41.3,57,1.7,light,light,No,Sí,Diabético,Diabético,True
+57547,6.6,200.0,24.7,39,1.7,none,light,No,No,Diabético,Diabético,True
+61024,6.5,145.0,28.9,42,1.7,light,none,No,Sí,Diabético,Diabético,True
+75503,4.5,159.0,27.3,35,1.7,moderate,none,No,No,Diabético,Diabético,True
+89327,4.8,160.0,26.1,41,1.7,moderate,light,No,No,Diabético,Diabético,True
+76911,5.0,140.0,21.8,18,1.7,none,none,No,Sí,Diabético,Diabético,True
+85854,4.0,100.0,32.8,25,1.7,moderate,none,No,No,No Diabético,No Diabético,True
+15351,5.8,80.0,34.3,45,1.7,none,light,No,Sí,No Diabético,No Diabético,True
+23825,5.7,240.0,26.1,44,1.7,light,none,No,No,Diabético,Diabético,True
+70011,6.2,145.0,27.3,60,1.7,frequent,none,No,No,Diabético,Diabético,True
+87154,5.0,85.0,44.2,35,1.7,light,light,No,Sí,No Diabético,No Diabético,True
+111022,5.5,136.0,27.1,31,1.7,moderate,light,No,No,Diabético,Diabético,True
+108063,5.5,62.0,25.6,51,1.7,frequent,light,No,Sí,No Diabético,No Diabético,True
+35088,4.5,160.0,27.9,48,1.7,moderate,moderate,No,No,Diabético,Diabético,True
+82328,6.6,158.0,36.0,61,1.7,moderate,none,No,No,Diabético,Diabético,True
+55089,3.5,158.0,25.2,55,1.7,frequent,none,No,No,Diabético,Diabético,True
+65629,5.8,200.0,27.3,45,1.7,light,light,No,Sí,Diabético,Diabético,True
+56342,6.6,85.0,23.4,18,1.7,none,moderate,No,No,Diabético,Diabético,True
+45178,4.0,85.0,18.2,30,1.7,moderate,moderate,No,No,No Diabético,No Diabético,True
+31324,5.7,80.0,27.3,23,1.7,moderate,heavy,No,No,No Diabético,No Diabético,True
+584,5.5,136.0,39.0,59,1.1,light,none,No,Sí,Diabético,Diabético,True
+12239,4.8,130.0,38.2,63,1.7,none,none,No,Sí,Diabético,Diabético,True
+51293,6.1,100.0,35.7,22,1.7,light,light,No,No,No Diabético,Diabético,False
+81713,6.2,158.0,35.4,57,1.7,light,light,No,Sí,Diabético,Diabético,True
+22880,5.8,155.0,29.2,44,1.7,light,moderate,No,No,Diabético,Diabético,True
+60007,6.2,145.0,40.6,41,1.7,frequent,none,No,No,Diabético,Diabético,True

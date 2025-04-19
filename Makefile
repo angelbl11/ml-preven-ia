@@ -10,7 +10,7 @@ all: dataset train run
 
 # Generar el dataset
 dataset:
-	$(PYTHONPATH) $(PYTHON) -c "from app.utils.dataset_generator import generate_dataset; generate_dataset()"
+	$(PYTHONPATH) $(PYTHON) -c "from app.utils.generate_dataset import generate_dataset; generate_dataset()"
 
 # Entrenar el modelo de obesidad
 train-obesity:
@@ -34,3 +34,4 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name ".pytest_cache" -delete 
+

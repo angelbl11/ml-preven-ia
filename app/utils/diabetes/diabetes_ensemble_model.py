@@ -17,9 +17,13 @@ from scipy import stats
 
 def prepare_data(df):
     """
-    Prepara los datos para el modelo de diabetes usando discretización y encoding
+    Prepara los datos para el modelo usando discretización y encoding
+    Implementa una versión más conservadora para evitar sobreajuste
     """
-    # Crear variables objetivo
+    # Filtrar pacientes entre 18 y 65 años
+    df = df[(df['age'] >= 18) & (df['age'] <= 65)].copy()
+
+    # Crear solo variables objetivo (sin features derivadas para evitar data leakage)
     df = create_target_variables(df)
 
     # Codificar variables categóricas
@@ -29,7 +33,7 @@ def prepare_data(df):
     for feature in categorical_features:
         df[f'{feature}_encoded'] = le.fit_transform(df[feature])
 
-    # Función auxiliar para discretización segura
+    # Función auxiliar para discretización segura con menos bins
     def safe_qcut(series, q, name):
         try:
             return pd.qcut(series, q=q, labels=False, duplicates='drop')
@@ -41,30 +45,21 @@ def prepare_data(df):
             except ValueError:
                 return pd.cut(series, bins=3, labels=False)
 
-    # Discretizar variables numéricas relevantes para diabetes
+    # Discretizar variables numéricas con menos categorías
     print("Discretizando variables numéricas...")
-    # Más categorías para HbA1c
-    df['hba1c_cat'] = safe_qcut(df['hba1c'], 5, 'HbA1c')
-    df['glucose_cat'] = safe_qcut(df['fasting_glucose'], 4, 'Glucose')
+    df['hba1c_cat'] = safe_qcut(df['hba1c'], 3, 'HbA1c')
+    df['glucose_cat'] = safe_qcut(df['fasting_glucose'], 3, 'Glucose')
     df['bmi_cat'] = safe_qcut(df['bmi'], 3, 'BMI')
     df['age_cat'] = safe_qcut(df['age'], 3, 'Age')
-    df['bp_cat'] = safe_qcut(df['systolic_bp'], 3, 'Blood Pressure')
     df['triglycerides_cat'] = safe_qcut(
         df['triglycerides'], 3, 'Triglycerides')
 
-    # Features base específicas para diabetes
+    # Features base (sin características derivadas complejas)
     features = [
-        'hba1c_cat',     # HbA1c como feature principal
-        'glucose_cat',    # Glucosa como segundo feature principal
-        'bmi_cat',
-        'age_cat',
-        'bp_cat',
-        'triglycerides_cat',
-        'gender_encoded',
-        'physical_activity_encoded',
-        'alcohol_consumption_encoded',
-        'smoker',
-        'family_history_diabetes'  # Historia familiar específica de diabetes
+        'hba1c_cat', 'glucose_cat', 'bmi_cat', 'age_cat', 'triglycerides_cat',
+        'gender_encoded', 'physical_activity_encoded',
+        'alcohol_consumption_encoded', 'smoker',
+        'family_history_diabetes'
     ]
 
     # Verificar valores nulos
@@ -80,7 +75,7 @@ def prepare_data(df):
     # Escalar features numéricas
     scaler = StandardScaler()
     numeric_features = ['hba1c_cat', 'glucose_cat',
-                        'bmi_cat', 'age_cat', 'bp_cat', 'triglycerides_cat']
+                        'bmi_cat', 'age_cat', 'triglycerides_cat']
     df[numeric_features] = scaler.fit_transform(df[numeric_features])
 
     print("Preparación de datos completada.")
@@ -346,10 +341,86 @@ def train_ensemble(X_train, X_test, y_train, y_test, feature_names):
     }
 
 
+def generate_diagnostic_table(X_test, y_test, model, original_df):
+    """
+    Genera una tabla de diagnóstico para los primeros 30 casos de prueba.
+
+    Parameters:
+    -----------
+    X_test : pd.DataFrame
+        Features de prueba
+    y_test : pd.Series
+        Etiquetas reales de prueba
+    model : dict
+        Diccionario con los modelos entrenados y pesos
+    original_df : pd.DataFrame
+        DataFrame original con los valores sin normalizar
+
+    Returns:
+    --------
+    pd.DataFrame
+        Tabla con los diagnósticos
+    """
+    # Obtener predicciones de cada modelo
+    rf_pred = model['rf_model'].predict_proba(X_test)[:, 1]
+    lgb_pred = model['lgb_model'].predict_proba(X_test)[:, 1]
+    xgb_pred = model['xgb_model'].predict_proba(X_test)[:, 1]
+
+    # Calcular predicción del ensemble
+    ensemble_pred = (
+        model['weights'][0] * rf_pred +
+        model['weights'][1] * lgb_pred +
+        model['weights'][2] * xgb_pred
+    )
+
+    # Crear DataFrame con los primeros 30 casos
+    df_diagnostic = pd.DataFrame()
+
+    # Obtener índices de los primeros 30 casos
+    test_indices = X_test.index[:30]
+
+    # Agregar características relevantes con valores originales
+    df_diagnostic['HbA1c (%)'] = original_df.loc[test_indices,
+                                                 'hba1c'].round(1)
+    df_diagnostic['Glucosa (mg/dL)'] = original_df.loc[test_indices,
+                                                       'fasting_glucose'].round(1)
+    df_diagnostic['IMC'] = original_df.loc[test_indices, 'bmi'].round(1)
+    df_diagnostic['Edad'] = original_df.loc[test_indices, 'age'].astype(int)
+    df_diagnostic['Triglicéridos (mg/dL)'] = original_df.loc[test_indices,
+                                                             'triglycerides'].round(1)
+
+    # Agregar variables de estilo de vida
+    df_diagnostic['Actividad Física'] = original_df.loc[test_indices,
+                                                        'physical_activity']
+    df_diagnostic['Consumo Alcohol'] = original_df.loc[test_indices,
+                                                       'alcohol_consumption']
+    df_diagnostic['Fumador'] = original_df.loc[test_indices, 'smoker'].map({
+                                                                           0: 'No', 1: 'Sí'})
+    df_diagnostic['Historia Familiar'] = original_df.loc[test_indices,
+                                                         'family_history_diabetes'].map({0: 'No', 1: 'Sí'})
+
+    # Agregar diagnóstico real
+    df_diagnostic['Diagnóstico Real'] = y_test.iloc[:30].map(
+        {0: 'No Diabético', 1: 'Diabético'})
+
+    # Agregar predicción del modelo
+    df_diagnostic['Predicción Modelo'] = (
+        ensemble_pred[:30] >= model['threshold']).astype(int)
+    df_diagnostic['Predicción Modelo'] = df_diagnostic['Predicción Modelo'].map(
+        {0: 'No Diabético', 1: 'Diabético'})
+
+    # Agregar columna de acierto
+    df_diagnostic['Acierto'] = (
+        df_diagnostic['Diagnóstico Real'] == df_diagnostic['Predicción Modelo'])
+
+    return df_diagnostic
+
+
 def main():
     # Cargar dataset
     print("Cargando dataset...")
     df = pd.read_csv('app/datasets/final_dataset.csv')
+    original_df = df.copy()  # Guardar copia con valores originales
 
     # Preparar datos
     df, features = prepare_data(df)
@@ -365,6 +436,21 @@ def main():
     # Entrenar modelo
     print("\nEntrenando modelos...")
     model = train_ensemble(X_train, X_test, y_train, y_test, features)
+
+    # Generar y guardar tabla de diagnóstico
+    print("\nGenerando tabla de diagnóstico...")
+    diagnostic_table = generate_diagnostic_table(
+        X_test, y_test, model, original_df)
+
+    # Crear directorio para resultados si no existe
+    results_dir = os.path.join('app', 'results', 'diabetes')
+    os.makedirs(results_dir, exist_ok=True)
+
+    # Guardar tabla en CSV
+    diagnostic_table.to_csv(os.path.join(
+        results_dir, 'diagnostic_table.csv'), index=True)
+    print(
+        f"Tabla de diagnóstico guardada en: {os.path.join(results_dir, 'diagnostic_table.csv')}")
 
     print("\nModelos guardados en el directorio 'models/diabetes/'")
     print("Curva ROC guardada como 'models/diabetes/roc_curves.png'")

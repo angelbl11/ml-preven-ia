@@ -1,0 +1,31 @@
+,IMC,Edad,Glucosa (mg/dL),Presión Sistólica (mmHg),Actividad Física,Consumo Alcohol,Fumador,Historia Familiar,Diagnóstico Real,Predicción Modelo,Acierto
+68371,26.7,49,130.0,132,light,none,No,Sí,No Obeso,No Obeso,True
+107150,27.0,47,84.0,126,moderate,light,Sí,Sí,No Obeso,No Obeso,True
+34954,27.3,36,155.0,132,moderate,heavy,No,No,No Obeso,No Obeso,True
+23135,27.7,22,90.0,132,none,light,No,Sí,No Obeso,No Obeso,True
+98899,29.0,20,158.0,132,none,none,No,No,No Obeso,Obeso,False
+61756,27.3,41,85.0,132,none,light,No,No,No Obeso,No Obeso,True
+33885,24.9,37,160.0,132,none,light,No,Sí,No Obeso,No Obeso,True
+8807,26.0,46,130.0,132,none,none,No,Sí,No Obeso,No Obeso,True
+17752,23.2,24,130.0,132,none,moderate,No,No,No Obeso,No Obeso,True
+55758,24.5,49,80.0,132,none,none,No,No,No Obeso,No Obeso,True
+103662,27.3,22,145.0,132,none,none,No,No,No Obeso,No Obeso,True
+65028,22.1,20,100.0,132,none,none,No,No,No Obeso,No Obeso,True
+76461,29.6,50,100.0,132,light,moderate,No,Sí,No Obeso,Obeso,False
+110225,27.1,19,136.0,132,none,none,No,No,No Obeso,No Obeso,True
+67253,23.2,62,130.0,132,none,none,No,Sí,No Obeso,No Obeso,True
+36156,27.8,35,126.0,132,light,light,No,No,No Obeso,No Obeso,True
+99681,35.4,28,159.0,132,none,none,No,Sí,Obeso,Obeso,True
+110286,27.1,21,136.0,132,light,heavy,No,Sí,No Obeso,No Obeso,True
+106689,31.6,59,70.0,170,none,moderate,No,No,Obeso,Obeso,True
+51901,21.3,46,155.0,132,none,light,No,Sí,No Obeso,No Obeso,True
+9480,25.8,52,159.0,132,moderate,moderate,No,No,No Obeso,No Obeso,True
+76335,27.3,54,100.0,132,frequent,moderate,No,No,No Obeso,No Obeso,True
+12703,38.2,47,200.0,132,moderate,heavy,No,Sí,Obeso,Obeso,True
+41959,20.8,37,80.0,132,light,none,No,No,No Obeso,No Obeso,True
+66584,24.8,49,145.0,132,moderate,none,No,Sí,No Obeso,No Obeso,True
+66742,42.8,37,126.0,132,light,light,No,Sí,Obeso,Obeso,True
+20306,25.3,58,158.0,132,light,light,No,Sí,No Obeso,No Obeso,True
+79911,24.2,39,140.0,132,none,none,No,No,No Obeso,No Obeso,True
+87960,27.3,59,160.0,132,none,none,No,Sí,No Obeso,No Obeso,True
+52945,27.3,25,130.0,132,light,none,No,No,No Obeso,No Obeso,True
