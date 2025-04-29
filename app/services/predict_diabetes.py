@@ -115,8 +115,6 @@ class DiabetesPredictor:
             data['fasting_glucose'], 'glucose', self.glucose_bins)
         df['bmi_cat'] = self._safe_transform(data['bmi'], 'bmi', self.bmi_bins)
         df['age_cat'] = self._safe_transform(data['age'], 'age', self.age_bins)
-        df['bp_cat'] = self._safe_transform(
-            data['systolic_bp'], 'bp', self.bp_bins)
         df['triglycerides_cat'] = self._safe_transform(
             data['triglycerides'], 'triglycerides', self.triglycerides_bins)
 
@@ -142,7 +140,6 @@ class DiabetesPredictor:
             'glucose_cat',    # Glucosa como segundo feature principal
             'bmi_cat',
             'age_cat',
-            'bp_cat',
             'triglycerides_cat',
             'gender_encoded',
             'physical_activity_encoded',
@@ -158,7 +155,7 @@ class DiabetesPredictor:
 
         # Escalar features numéricas
         numeric_features = ['hba1c_cat', 'glucose_cat',
-                            'bmi_cat', 'age_cat', 'bp_cat', 'triglycerides_cat']
+                            'bmi_cat', 'age_cat', 'triglycerides_cat']
         df[numeric_features] = self.scaler.fit_transform(df[numeric_features])
 
         return df[features]
